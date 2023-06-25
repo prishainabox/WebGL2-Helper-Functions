@@ -1,3 +1,17 @@
+        
+function resizeCanvas(gl, resolutionUniLoc, w = 400, h = 400) {
+	if (gl.canvas.width !== w ||
+			gl.canvas.height !== h) {
+		// size canvas to w, h
+		gl.canvas.width = w;
+		gl.canvas.height = h;
+		// set viewport
+		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+		// pass in resolution
+		gl.uniform2fv(resolutionUniLoc, [gl.canvas.width, gl.canvas.height]);
+	}
+}
+
 // get contents of .frag, .vert, etc. files
 function getSourceSynch(url) {
   const req = new XMLHttpRequest();
@@ -7,6 +21,7 @@ function getSourceSynch(url) {
 	else console.log("GET failed. Status code: " + req.status);
 }
 
+/*
 // resize canvas
 function resizeGlCanvas(gl) {
 	const canvas = gl.canvas;
@@ -31,14 +46,31 @@ function getWEBGL2(canvasId) {
 	}
 	else console.log("No WebGL2 for you! :(((")
 }
+*/
 
-function createShader(gl, srcId) {
+// get webgl2 context
+function getWEBGL2(canvas) {
+	const gl = canvas.getContext("webgl2", {
+			antialias: false,
+			preserveDrawingBuffer: true,
+			premultipliedAlpha: false
+	});
+	if (gl)
+		return gl;
+	else console.log("No WebGL2 for you! :(((");
+}
+
+function createShader(gl, srcId, replaceStrings) {
 	// get source
 	const scriptTag = document.getElementById(srcId)
-	const source = getSourceSynch(scriptTag.src);
+	let source = scriptTag.text;
 	if (!source) {
 		console.log("Unknown script element.");
 		return;
+	}
+	// replace strings
+	for (let strng in replaceStrings) {
+		source = source.replaceAll(strng, replaceStrings[strng]);
 	}
 	// get type of source
 	let type;
@@ -48,6 +80,7 @@ function createShader(gl, srcId) {
 		type = gl.FRAGMENT_SHADER;
 	} else {
 		console.log("Wrong type for script tag.");
+		return;
 	}
 	// create shader, set source code, and compile
 	const shader = gl.createShader(type);
@@ -64,11 +97,11 @@ function createShader(gl, srcId) {
 }
 
 // link two shaders into a program
-function createProgram(gl, vsId, fsId) {
+function createProgram(gl, vsId, fsId, replaceStrings = {}) {
 	const program = gl.createProgram();
 	// create and attach shaders
-	const vShader = createShader(gl, vsId);
-	const fShader = createShader(gl, fsId);
+	const vShader = createShader(gl, vsId, replaceStrings);
+	const fShader = createShader(gl, fsId, replaceStrings);
 	gl.attachShader(program, vShader);
 	gl.attachShader(program, fShader);
 	// link and validate
@@ -115,5 +148,9 @@ function texture(gl) {
 
 function programLog(gl, program) {
 	const log = gl.getProgramInfoLog(program);
-	if (log.length > 0) console.log(log);
+	if (log.length > 0) {
+		console.log(log);
+		return true;
+	}
 }
+        
